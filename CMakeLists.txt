@@ -18,6 +18,7 @@ set(SOURCES
     src/png.c
     src/utils.h
     src/utils.c
+    src/core.h
 )
 
 add_executable(

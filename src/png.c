@@ -6,6 +6,9 @@
 #include "png.h"
 #include "utils.h"
 #include "zlib.h"
+#include "core.h"
+
+NEW_ARRAY(uint32_t)
 
 void extractImportantInformation(span* data, uint32_t* width, uint32_t* height, uint32_t* bpp)
 {
@@ -54,10 +57,14 @@ void H_processPNG(FILE* file, const char* data)
         return;
     }
     
+    uint32_t_dynamic_array chunk_lengths;
+    init_dynamic_array_uint32_t(&chunk_lengths, NULL);
+
     uint32_t width, height;
     uint32_t bpp;
 
     z_stream stream;
+    bool inflate_started = false;
 
     stream.zalloc = NULL;
     stream.zfree = NULL;
@@ -88,8 +95,8 @@ void H_processPNG(FILE* file, const char* data)
     
     uint32_t length, crc;
     
-    char previous_chunk_type[CHUNK_TYPE_LENGTH + 1];
-    previous_chunk_type[CHUNK_TYPE_LENGTH] = '\0';
+    //char previous_chunk_type[CHUNK_TYPE_LENGTH + 1];
+    //previous_chunk_type[CHUNK_TYPE_LENGTH] = '\0';
 
     char chunk_type[CHUNK_TYPE_LENGTH + 1];
     chunk_type[CHUNK_TYPE_LENGTH] = '\0';
@@ -98,50 +105,6 @@ void H_processPNG(FILE* file, const char* data)
     {
         fread(&length, sizeof(byte), sizeof(uint32_t), file);
         fread(chunk_type, sizeof(byte), CHUNK_TYPE_LENGTH, file);
-
-        if (!strcmp(chunk_type, "IDAT"))
-        {
-            stream.next_in = buffer.data;
-            stream.avail_in = buffer.length;
-
-            if (strcmp(chunk_type, previous_chunk_type) != 0)
-            {
-                resizeSpan(&inflated, ((width * bpp) + 1) * height);
-
-                stream.next_out = inflated.data;
-                stream.avail_out = inflated.capacity;
-
-                int ret = inflateInit(&stream);
-            }
-            else
-            {
-                int ret;
-
-                do 
-                {
-                    ret = inflate(&stream, Z_NO_FLUSH);
-                    //printf("inflate Z_BUF_ERROR: %d\n", ret);
-                } while (ret != Z_BUF_ERROR);
-            }
-        }
-        else
-        {
-            if (!strcmp(previous_chunk_type, "IDAT"))
-            {
-                stream.next_in = buffer.data;
-                stream.avail_in = buffer.length;
-
-                int ret;
-
-                do 
-                {
-                    ret = inflate(&stream, Z_NO_FLUSH);
-                    //printf("inflate Z_STREAM_ENDing: %d\n", ret);
-                } while (ret != Z_STREAM_END);
-
-                ret = inflateEnd(&stream);
-            }
-        }
 
         length = byteswap(length);
 
@@ -160,24 +123,63 @@ void H_processPNG(FILE* file, const char* data)
             extractImportantInformation(&buffer, &width, &height, &bpp);
             printf("Properties: Width: %d, Height: %d, BPP: %d\n", width, height, bpp);
         }
+        else if (!strcmp(chunk_type, "IDAT"))
+        {
+            int ret;
+
+            stream.next_in = buffer.data;
+            stream.avail_in = buffer.length;
+
+            append_uint32_t(&chunk_lengths, (uint32_t*)&buffer.length);
+
+            if (!inflate_started)
+            {
+                size_t projected_size = ((width * bpp) + 1) * height; 
+                resizeSpan(&inflated, projected_size);
+
+                stream.next_out = inflated.data;
+                stream.avail_out = inflated.capacity;
+
+                ret = inflateInit(&stream);
+
+                if (ret == Z_OK)
+                    inflate_started = true;
+            }
+
+            do 
+            {
+                ret = inflate(&stream, Z_NO_FLUSH);
+                //printf("inflate ret: %d\n", ret);
+            } while (ret != Z_BUF_ERROR && ret != Z_STREAM_END);
+            
+            if (ret == Z_STREAM_END)
+            {
+                ret = inflateEnd(&stream);
+            }
+        }
 
         //if (strcmp(chunk_type, "IDAT") != 0)
         //{
-            length = byteswap(length);
+        length = byteswap(length);
 
-            fwrite(&length, sizeof(byte), sizeof(uint32_t), out);
-            fwrite(chunk_type, sizeof(byte), CHUNK_TYPE_LENGTH, out);
-            fwrite(buffer.data, sizeof(byte), buffer.length, out);
-            fwrite(&crc, sizeof(byte), sizeof(uint32_t), out);
+        fwrite(&length, sizeof(byte), sizeof(uint32_t), out);
+        fwrite(chunk_type, sizeof(byte), CHUNK_TYPE_LENGTH, out);
+        fwrite(buffer.data, sizeof(byte), buffer.length, out);
+        fwrite(&crc, sizeof(byte), sizeof(uint32_t), out);
         //}
 
-        memcpy(previous_chunk_type, chunk_type, CHUNK_TYPE_LENGTH);
-
     } while(strcmp(chunk_type, "IEND") != 0);
+    
+    for (int i = 0; i < chunk_lengths.size; ++i)
+    {
+        uint32_t* chunk_size = get_uint32_t(&chunk_lengths, i);
+        printf("i: %d\n", *chunk_size);
+    }
 
     fclose(out);
     destroySpan(&buffer);
     destroySpan(&inflated);
+    free_dynamic_array_uint32_t(&chunk_lengths);
 }
 
 char* E_processPNG(FILE* file)

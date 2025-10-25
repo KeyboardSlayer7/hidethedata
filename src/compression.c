@@ -54,7 +54,9 @@ int zlibDeflate(compression_state* cs)
     
     if (ret == Z_STREAM_END)
     {
+        printf("Ending deflate\n");
         ret = deflateEnd(&cs->stream);
+        printf("Ended deflate\n");
     }
 
     return ret;

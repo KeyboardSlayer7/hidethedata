@@ -125,7 +125,10 @@ void H_processPNG(FILE* file, const char* data)
             cmprsn_state.stream.next_in = buffer.data;
             cmprsn_state.stream.avail_in = buffer.length; 
             
-            uint32_t start = cmprsn_state.stream.total_out;
+            uint32_t start = 0;
+
+            if (cmprsn_state.started)
+                start = cmprsn_state.stream.total_out;
             printf("start: %d\n", start);
 
             int ret = zlibInflate(&cmprsn_state);
@@ -138,28 +141,38 @@ void H_processPNG(FILE* file, const char* data)
         {
             if (!strcmp(previous_chunk_type, "IDAT"))
             {
-                memset(&cmprsn_state.stream, 0, sizeof(z_stream));
+                memset(&cmprsn_state, 0, sizeof(compression_state));
 
                 int ret;
-                int offset = 0;
+                //int offset = 0;
+
+                cmprsn_state.started = false;
 
                 cmprsn_state.stream.zalloc = NULL;
                 cmprsn_state.stream.zfree = NULL;
                 cmprsn_state.stream.opaque = NULL;
 
-                cmprsn_state.stream.next_out = buffer.data;
-                cmprsn_state.stream.avail_out = buffer.capacity;
+                //cmprsn_state.stream.next_out = buffer.data;
+                //cmprsn_state.stream.avail_out = buffer.capacity;
+
+                cmprsn_state.stream.next_in = inflated.data;
 
                 for (int i = 0; i < chunk_lengths.size; ++i)
                 {
                     uint32_t length = *get_uint32_t(&chunk_lengths, i);
 
-                    cmprsn_state.stream.next_in = inflated.data + offset;
+                    //cmprsn_state.stream.next_in = inflated.data + offset;
                     cmprsn_state.stream.avail_in = length;
+                    
+                    cmprsn_state.stream.next_out = buffer.data;
+                    cmprsn_state.stream.avail_out = buffer.capacity;
+
+                    if (i == chunk_lengths.size - 1)
+                        cmprsn_state.final = true;
 
                     zlibDeflate(&cmprsn_state);
 
-                    offset += length;
+                    //offset += length;
                 }
             }
         }
@@ -173,6 +186,8 @@ void H_processPNG(FILE* file, const char* data)
             fwrite(buffer.data, sizeof(byte), buffer.length, out);
             fwrite(&crc, sizeof(byte), sizeof(uint32_t), out);
         //}
+
+        memcpy(previous_chunk_type, chunk_type, CHUNK_TYPE_LENGTH);
 
     } while(strcmp(chunk_type, "IEND") != 0);
     

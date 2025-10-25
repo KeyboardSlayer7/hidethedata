@@ -8,10 +8,12 @@
 #define PNG_HEADER_LENGTH 8
 #define CHUNK_TYPE_LENGTH 4
 
-typedef struct important_info_t
+/*
+typedef struct block_info_t 
 {
 
-} important_info;
+} block_info;
+*/
 
 void extractImportantInformation(span* data, uint32_t* width, uint32_t* height, uint32_t* bpp);
 

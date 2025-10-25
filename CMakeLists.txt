@@ -19,6 +19,8 @@ set(SOURCES
     src/utils.h
     src/utils.c
     src/core.h
+    src/compression.h
+    src/compression.c
 )
 
 add_executable(

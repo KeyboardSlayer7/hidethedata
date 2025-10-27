@@ -20,7 +20,7 @@ int zlibInflate(compression_state* cs)
     do 
     {
         ret = inflate(&cs->stream, Z_NO_FLUSH);
-        printf("inflate ret: %d\n", ret);
+        //printf("inflate ret: %d\n", ret);
     } while (ret != Z_BUF_ERROR && ret != Z_STREAM_END);
 
     if (ret == Z_STREAM_END)
@@ -43,20 +43,18 @@ int zlibDeflate(compression_state* cs)
             cs->started = true;
     }
 
-    int flush = (cs->final) ? Z_FINISH : Z_NO_FLUSH;
+    int flush = (cs->final) ? Z_FINISH : Z_SYNC_FLUSH;
  
     do 
     {
         ret = deflate(&cs->stream, flush);
-        printf("deflate ret: %d\n", ret);
+        //printf("deflate ret: %d\n", ret);
     } while(ret != Z_BUF_ERROR && ret != Z_STREAM_END);
 
     
     if (ret == Z_STREAM_END)
     {
-        printf("Ending deflate\n");
         ret = deflateEnd(&cs->stream);
-        printf("Ended deflate\n");
     }
 
     return ret;

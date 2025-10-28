@@ -144,7 +144,7 @@ void H_processPNG(FILE* file, const char* data)
                 //memset(&cmprsn_state, 0, sizeof(compression_state));
                 
                 unfilter(&inflated, &information);
-                modifyIDATChunks(&inflated, buffer.capacity, &chunk_lengths, &information, out);
+                modifyIDATChunks(&inflated, buffer.capacity, &chunk_lengths, &information, data, out);
             }
         }
 
@@ -180,7 +180,7 @@ char* E_processPNG(FILE* file)
     return "";
 }
 
-void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_array* chunk_lengths, png_info* info, FILE* out)
+void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_array* chunk_lengths, png_info* info, const char* string, FILE* out)
 {
     compression_state cmprsn_state;
 
@@ -189,6 +189,8 @@ void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_a
 
     resizeSpan(&filtered, inflated->capacity);
     resizeSpan(&deflated, buffer_length + 4096);
+    
+    hide(inflated, string);
 
     filter(inflated, &filtered, info);
     
@@ -243,4 +245,36 @@ void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_a
     
     destroySpan(&filtered);
     destroySpan(&deflated);
+}
+
+void hide(span* data, const char* string)
+{
+    uint32_t length = strlen(string);
+    byte* length_bytes = (byte*)&length;
+    printf("%d bytes to be hidden\n", length);
+    printf("done\n");
+    for (int b = 0; b < sizeof(uint32_t); ++b)
+    {
+        for (int bp = 0; bp < NUM_BIT_PAIRS; ++bp)
+        {
+            int index = b * NUM_BIT_PAIRS + bp + 1;
+            data->data[index] = setLSBs(data->data[index], getNthBitPair(length_bytes[b], bp));
+        }
+    }
+    printf("done\n");
+    for (int b = 0; b < length; ++b)
+    {
+        for (int bp = 0; bp < NUM_BIT_PAIRS; ++bp)
+        {
+            int index = b * NUM_BIT_PAIRS + bp + (sizeof(uint32_t) * NUM_BIT_PAIRS) + 1;
+            data->data[index] = setLSBs(data->data[index], getNthBitPair(string[b], bp));
+        }
+    }
+    
+    printf("done\n");
+}
+
+char* extract(span* data)
+{
+    return "";
 }

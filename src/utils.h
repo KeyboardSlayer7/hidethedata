@@ -14,6 +14,8 @@
     #define byteswap __builtin_bswap32
 #endif
 
+#define NUM_BIT_PAIRS 4
+
 typedef uint8_t byte;
 
 typedef struct span_t
@@ -41,5 +43,8 @@ typedef struct png_info_t
 
 void resizeSpan(span* s, size_t size);
 void destroySpan(span* s);
+
+byte getNthBitPair(byte b, uint8_t n);
+byte setLSBs(byte original, byte lsbs);
 
 #endif

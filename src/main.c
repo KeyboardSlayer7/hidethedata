@@ -33,7 +33,7 @@ int main(int argc, char* argv[])
             return EXIT_FAILURE;
         }
         
-        const char* string = argv[4];
+        const char* string = argv[3];
         H_processPNG(file, string);
     }
     else if (option[0] == 'e')

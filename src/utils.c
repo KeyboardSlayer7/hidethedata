@@ -32,3 +32,21 @@ void destroySpan(span* s)
 {
     free(s->data);
 }
+
+byte getNthBitPair(byte b, uint8_t n)
+{
+    byte bitmask = 3 << (n * 2);
+    byte temp = b & bitmask;
+    byte ret = temp >> (n * 2);
+
+    return ret;
+}
+
+byte setLSBs(byte original, byte lsbs)
+{
+    byte bitmask = ~3;
+    byte cleared = original & bitmask;
+    byte ret = cleared | lsbs;
+
+    return ret;
+}

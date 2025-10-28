@@ -16,6 +16,16 @@ void extractImportantInformation(span* data, png_info* info);
 void H_processPNG(FILE* file, const char* data);
 char* E_processPNG(FILE* file);
 
-void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_array* chunk_lengths, png_info* info, FILE* out);
+void modifyIDATChunks(
+    span* inflated, 
+    uint32_t buffer_length, 
+    uint32_t_dynamic_array* chunk_lengths, 
+    png_info* info, 
+    const char* string, 
+    FILE* out
+);
+
+void hide(span* data, const char* string);
+char* extract(span* data);
 
 #endif //PNG_H

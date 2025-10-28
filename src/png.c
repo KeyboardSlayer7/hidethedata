@@ -8,22 +8,23 @@
 #include "zlib.h"
 #include "compression.h"
 
+//ARRAY(uint32_t)
 NEW_ARRAY(uint32_t)
 
-void extractImportantInformation(span* data, uint32_t* width, uint32_t* height, uint32_t* bpp)
+void extractImportantInformation(span* data, png_info* info)
 {
-    memcpy(width, data->data, sizeof(uint32_t));
-    memcpy(height, data->data + sizeof(uint32_t), sizeof(uint32_t));
+    memcpy(&info->width, data->data, sizeof(uint32_t));
+    memcpy(&info->height, data->data + sizeof(uint32_t), sizeof(uint32_t));
 
-    *width = byteswap(*width);
-    *height = byteswap(*height);
+    info->width = byteswap(info->width);
+    info->height = byteswap(info->height);
 
-    uint8_t bit_depth = data->data[8];
-    uint8_t color_type = data->data[9];
+    info->bit_depth = data->data[8];
+    info->color_type = data->data[9];
 
     int channels = 0;
 
-    switch (color_type)
+    switch (info->color_type)
     {
         case 0:
             channels = 1;
@@ -44,7 +45,7 @@ void extractImportantInformation(span* data, uint32_t* width, uint32_t* height, 
             break;
     }
 
-    *bpp = (bit_depth * channels) / 8;
+    info->bpp = (info->bit_depth * channels) / 8;
 }
 
 void H_processPNG(FILE* file, const char* data)
@@ -60,8 +61,7 @@ void H_processPNG(FILE* file, const char* data)
     uint32_t_dynamic_array chunk_lengths;
     init_dynamic_array_uint32_t(&chunk_lengths, NULL);
 
-    uint32_t width, height;
-    uint32_t bpp;
+    png_info information;
     uint32_t deflated_size = 0;
     //z_stream stream;
     //bool inflate_started = false;
@@ -76,7 +76,6 @@ void H_processPNG(FILE* file, const char* data)
 
     span buffer = SPAN_INITIALIZER;
     span inflated = SPAN_INITIALIZER;
-    span deflated = SPAN_INITIALIZER;
 
     resizeSpan(&buffer, PNG_HEADER_LENGTH);
     
@@ -110,11 +109,12 @@ void H_processPNG(FILE* file, const char* data)
         
         if (!strcmp(chunk_type, "IHDR"))
         {
-            extractImportantInformation(&buffer, &width, &height, &bpp);
+            extractImportantInformation(&buffer, &information);
 
-            printf("Properties: Width: %d, Height: %d, BPP: %d\n", width, height, bpp);
+            printf("Properties: Width: %d, Height: %d, BPP: %d\n", 
+                    information.width, information.height, information.bpp);
             
-            size_t projected_size = ((width * bpp) + 1) * height; 
+            size_t projected_size = ((information.width * information.bpp) + 1) * information.height; 
             resizeSpan(&inflated, projected_size);
 
             cmprsn_state.stream.next_out = inflated.data;
@@ -141,58 +141,10 @@ void H_processPNG(FILE* file, const char* data)
         {
             if (!strcmp(previous_chunk_type, "IDAT"))
             {
-                memset(&cmprsn_state, 0, sizeof(compression_state));
-
-                int ret;
-
-                resizeSpan(&deflated, buffer.capacity + 4096);
-
-                cmprsn_state.started = false;
-
-                cmprsn_state.stream.zalloc = NULL;
-                cmprsn_state.stream.zfree = NULL;
-                cmprsn_state.stream.opaque = NULL;
-
-                //cmprsn_state.stream.next_out = buffer.data;
-                //cmprsn_state.stream.avail_out = buffer.capacity;
-
-                cmprsn_state.stream.next_in = inflated.data;
-
-                for (int i = 0; i < chunk_lengths.size; ++i)
-                {
-                    uint32_t length = *get_uint32_t(&chunk_lengths, i);
-
-                    //cmprsn_state.stream.next_in = inflated.data + offset;
-                    cmprsn_state.stream.avail_in = length;
-                    
-                    cmprsn_state.stream.next_out = deflated.data;
-                    cmprsn_state.stream.avail_out = deflated.capacity;
-
-                    if (i == chunk_lengths.size - 1)
-                        cmprsn_state.final = true;
-
-                    int s = 0;
-
-                    if (cmprsn_state.started)
-                        s = cmprsn_state.stream.total_out;
-
-                    zlibDeflate(&cmprsn_state);
-
-                    uint32_t new_length = cmprsn_state.stream.total_out - s;
-                    const char* idat_chunk = "IDAT";
-                    uint32_t new_crc = crc32(0L, NULL, 0);
-
-                    new_crc = crc32(new_crc, (byte*)"IDAT", CHUNK_TYPE_LENGTH);
-                    new_crc = crc32(new_crc, deflated.data, new_length);
-                    new_crc = byteswap(new_crc);
-
-                    uint32_t new_length_bs = byteswap(new_length);
-                    
-                    fwrite(&new_length_bs, sizeof(byte), sizeof(uint32_t), out);
-                    fwrite(idat_chunk, sizeof(byte), CHUNK_TYPE_LENGTH, out);
-                    fwrite(deflated.data, sizeof(byte), new_length, out);
-                    fwrite(&new_crc, sizeof(byte), sizeof(uint32_t), out);
-                }
+                //memset(&cmprsn_state, 0, sizeof(compression_state));
+                
+                unfilter(&inflated, &information);
+                modifyIDATChunks(&inflated, buffer.capacity, &chunk_lengths, &information, out);
             }
         }
 
@@ -219,11 +171,76 @@ void H_processPNG(FILE* file, const char* data)
     fclose(out);
     destroySpan(&buffer);
     destroySpan(&inflated);
-    destroySpan(&deflated);
+
     free_dynamic_array_uint32_t(&chunk_lengths);
 }
 
 char* E_processPNG(FILE* file)
 {
     return "";
+}
+
+void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_array* chunk_lengths, png_info* info, FILE* out)
+{
+    compression_state cmprsn_state;
+
+    span filtered = SPAN_INITIALIZER;
+    span deflated = SPAN_INITIALIZER;
+
+    resizeSpan(&filtered, inflated->capacity);
+    resizeSpan(&deflated, buffer_length + 4096);
+
+    filter(inflated, &filtered, info);
+    
+    int ret;
+
+    cmprsn_state.started = false;
+
+    cmprsn_state.stream.zalloc = NULL;
+    cmprsn_state.stream.zfree = NULL;
+    cmprsn_state.stream.opaque = NULL;
+
+    //cmprsn_state.stream.next_out = buffer.data;
+    //cmprsn_state.stream.avail_out = buffer.capacity;
+
+    cmprsn_state.stream.next_in = filtered.data;
+
+    for (int i = 0; i < chunk_lengths->size; ++i)
+    {
+        uint32_t length = *get_uint32_t(chunk_lengths, i);
+
+        //cmprsn_state.stream.next_in = inflated.data + offset;
+        cmprsn_state.stream.avail_in = length;
+        
+        cmprsn_state.stream.next_out = deflated.data;
+        cmprsn_state.stream.avail_out = deflated.capacity;
+
+        if (i == chunk_lengths->size - 1)
+            cmprsn_state.final = true;
+
+        int s = 0;
+
+        if (cmprsn_state.started)
+            s = cmprsn_state.stream.total_out;
+
+        zlibDeflate(&cmprsn_state);
+
+        uint32_t new_length = cmprsn_state.stream.total_out - s;
+        const char* idat_chunk = "IDAT";
+        uint32_t new_crc = crc32(0L, NULL, 0);
+
+        new_crc = crc32(new_crc, (byte*)"IDAT", CHUNK_TYPE_LENGTH);
+        new_crc = crc32(new_crc, deflated.data, new_length);
+        new_crc = byteswap(new_crc);
+
+        uint32_t new_length_bs = byteswap(new_length);
+        
+        fwrite(&new_length_bs, sizeof(byte), sizeof(uint32_t), out);
+        fwrite(idat_chunk, sizeof(byte), CHUNK_TYPE_LENGTH, out);
+        fwrite(deflated.data, sizeof(byte), new_length, out);
+        fwrite(&new_crc, sizeof(byte), sizeof(uint32_t), out);
+    }
+    
+    destroySpan(&filtered);
+    destroySpan(&deflated);
 }

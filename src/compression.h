@@ -13,7 +13,20 @@ typedef struct compression_state_t
     bool final;
 } compression_state;
 
+typedef enum filter_type_e
+{
+    NONE = 0,
+    SUB = 1,
+    UP = 2,
+    AVERAGE = 3,
+    PAETH = 4
+} filter_type;
+
 int zlibInflate(compression_state* cs);
 int zlibDeflate(compression_state* cs);
+
+uint8_t paeth(uint8_t a, uint8_t b, uint8_t c);
+void unfilter(span* filtered, const png_info* info);
+void filter(span* unfiltered, span* filtered, const png_info* info);
 
 #endif //COMPRESSION_H

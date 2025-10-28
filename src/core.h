@@ -14,7 +14,13 @@ typedef struct T##_dynamic_array_t  \
     size_t element_size;            \
     T* data;                        \
     Destructor destructor;          \
-} T##_dynamic_array;
+} T##_dynamic_array;                \
+                                    \
+void init_dynamic_array_##T(T##_dynamic_array* array, Destructor destructor);   \
+T* get_##T(T##_dynamic_array* array, size_t index);                             \
+int resize_dynamic_array_##T(T##_dynamic_array* array);                         \
+void append_##T(T##_dynamic_array* array, T* value);                            \
+void free_dynamic_array_##T(T##_dynamic_array* array);
 
 #define INIT_ARRAY(T)                                                           \
 void init_dynamic_array_##T(T##_dynamic_array* array, Destructor destructor)    \
@@ -89,7 +95,6 @@ void free_dynamic_array_##T(T##_dynamic_array* array)   \
 }
 
 #define NEW_ARRAY(T)    \
-    ARRAY(T)            \
     INIT_ARRAY(T)       \
     GET(T)              \
     RESIZE(T)           \

@@ -1,7 +1,13 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 
 #include "utils.h"
+
+#define WHAT
+#include "core.h"
+
+ARRAY(uint32_t)
 
 void resizeSpan(span* s, size_t size)
 {

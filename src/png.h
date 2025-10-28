@@ -2,22 +2,20 @@
 #define PNG_H
 
 #include <stdio.h>
+#include <stdint.h>
 
 #include "utils.h"
 
 #define PNG_HEADER_LENGTH 8
 #define CHUNK_TYPE_LENGTH 4
 
-/*
-typedef struct block_info_t 
-{
+ARRAY(uint32_t)
 
-} block_info;
-*/
-
-void extractImportantInformation(span* data, uint32_t* width, uint32_t* height, uint32_t* bpp);
+void extractImportantInformation(span* data, png_info* info);
 
 void H_processPNG(FILE* file, const char* data);
 char* E_processPNG(FILE* file);
+
+void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_array* chunk_lengths, png_info* info, FILE* out);
 
 #endif //PNG_H

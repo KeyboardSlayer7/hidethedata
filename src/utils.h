@@ -30,6 +30,15 @@ typedef struct span_t
         .capacity = 0       \
     }
 
+typedef struct png_info_t 
+{
+    uint32_t width;
+    uint32_t height;
+    uint8_t bit_depth;
+    uint8_t color_type;
+    uint8_t bpp;
+} png_info;
+
 void resizeSpan(span* s, size_t size);
 void destroySpan(span* s);
 

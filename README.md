@@ -15,7 +15,6 @@ Heard about it. Sounded cool. Wanted to explore the concept for myself.
 
 :construction: In Progress
 
-- Steganography with PNGs that use the Paeth filter 
 - Embedding files in PNGs
 - Adding support for options (e.g. -f)
 
@@ -26,6 +25,9 @@ Heard about it. Sounded cool. Wanted to explore the concept for myself.
 :bulb: Future Plans
 
 - Maintenance and optimisations 
+
+> [!NOTE]
+> There is currently no support for PNG images with interlacing.
 
 ## Usage
 

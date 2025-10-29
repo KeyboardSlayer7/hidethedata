@@ -62,7 +62,21 @@ int zlibDeflate(compression_state* cs)
 
 uint8_t paeth(uint8_t a, uint8_t b, uint8_t c)
 {
-    return 0;
+    uint8_t p, pa, pb, pc, pr;
+
+    p = a + b - c;
+    pa = abs(p - a);
+    pb = abs(p - b);
+    pc = abs(p - c);
+
+    if (pa <= pb && pa <= pc)
+        pr = a;
+    else if (pb <= pc)
+        pr = b;
+    else
+        pr = c;
+
+    return pr;
 }
 
 void unfilter(span* filtered, const png_info* info)

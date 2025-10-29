@@ -18,6 +18,12 @@
 
 typedef uint8_t byte;
 
+typedef enum program_mode_e
+{
+    EXTRACT = 101,
+    HIDE = 104
+} program_mode;
+
 typedef struct span_t
 {
     byte* data;

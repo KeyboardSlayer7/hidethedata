@@ -48,14 +48,20 @@ void extractImportantInformation(span* data, png_info* info)
     info->bpp = (info->bit_depth * channels) / 8;
 }
 
-void H_processPNG(FILE* file, const char* data)
+char* H_processPNG(FILE* file, const char* data, program_mode mode)
 {
-    FILE* out = fopen("out.png", "wb");
+    FILE* out; 
+    char* string = NULL;
 
-    if (out == NULL)
+    if (mode == HIDE)
     {
-        printf("[ERROR] File out.png could not be created or opened\n");
-        return;
+        out = fopen("out.png", "wb");
+
+        if (out == NULL)
+        {
+            printf("[ERROR] File out.png could not be created or opened\n");
+            return string;
+        }
     }
     
     uint32_t_dynamic_array chunk_lengths;
@@ -80,7 +86,9 @@ void H_processPNG(FILE* file, const char* data)
     resizeSpan(&buffer, PNG_HEADER_LENGTH);
     
     fread(buffer.data, sizeof(byte), PNG_HEADER_LENGTH, file);
-    fwrite(buffer.data, sizeof(byte), PNG_HEADER_LENGTH, out);
+    
+    if (mode == HIDE)
+        fwrite(buffer.data, sizeof(byte), PNG_HEADER_LENGTH, out);
     
     uint32_t length, crc;
     
@@ -144,11 +152,15 @@ void H_processPNG(FILE* file, const char* data)
                 //memset(&cmprsn_state, 0, sizeof(compression_state));
                 
                 unfilter(&inflated, &information);
-                modifyIDATChunks(&inflated, buffer.capacity, &chunk_lengths, &information, data, out);
+                
+                if (mode == HIDE)
+                    modifyIDATChunks(&inflated, buffer.capacity, &chunk_lengths, &information, data, out);
+                else if (mode == EXTRACT)
+                    string = extract(&inflated);
             }
         }
 
-        if (strcmp(chunk_type, "IDAT") != 0)
+        if (mode == HIDE && strcmp(chunk_type, "IDAT") != 0)
         {
             length = byteswap(length);
 
@@ -167,18 +179,24 @@ void H_processPNG(FILE* file, const char* data)
         uint32_t* chunk_size = get_uint32_t(&chunk_lengths, i);
         printf("%d: %d\n", i, *chunk_size);
     }
+    
+    if (mode == HIDE)
+        fclose(out);
 
-    fclose(out);
     destroySpan(&buffer);
     destroySpan(&inflated);
 
     free_dynamic_array_uint32_t(&chunk_lengths);
+
+    return string;
 }
 
+/*
 char* E_processPNG(FILE* file)
 {
     return "";
 }
+*/
 
 void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_array* chunk_lengths, png_info* info, const char* string, FILE* out)
 {
@@ -251,8 +269,10 @@ void hide(span* data, const char* string)
 {
     uint32_t length = strlen(string);
     byte* length_bytes = (byte*)&length;
+
     printf("%d bytes to be hidden\n", length);
     printf("done\n");
+
     for (int b = 0; b < sizeof(uint32_t); ++b)
     {
         for (int bp = 0; bp < NUM_BIT_PAIRS; ++bp)
@@ -261,7 +281,9 @@ void hide(span* data, const char* string)
             data->data[index] = setLSBs(data->data[index], getNthBitPair(length_bytes[b], bp));
         }
     }
+
     printf("done\n");
+
     for (int b = 0; b < length; ++b)
     {
         for (int bp = 0; bp < NUM_BIT_PAIRS; ++bp)
@@ -276,5 +298,34 @@ void hide(span* data, const char* string)
 
 char* extract(span* data)
 {
-    return "";
+    uint32_t length = 0;
+    byte* length_bytes = (byte*)&length;
+
+    for (int b = 0; b < sizeof(uint32_t); ++b)
+    {
+        for (int bp = 0; bp < NUM_BIT_PAIRS; ++bp)
+        {
+            int index = b * NUM_BIT_PAIRS + bp + 1;
+            length_bytes[b] |= getNthBitPair(data->data[index], 0) << (bp * 2);
+        }
+    }
+
+    printf("found length: %d\n", length);
+
+    char* string = malloc(sizeof(char) * (length + 1));
+    memset(string, 0, sizeof(char) * length);
+    string[length] = '\0';
+
+    for (int b = 0; b < length; ++b)
+    {
+        for (int bp = 0; bp < NUM_BIT_PAIRS; ++bp)
+        {
+            int index = b * NUM_BIT_PAIRS + bp + (sizeof(uint32_t) * NUM_BIT_PAIRS) + 1;
+            string[b] |= getNthBitPair(data->data[index], 0) << (bp * 2);
+        }
+    }
+
+    return string;
 }
+
+

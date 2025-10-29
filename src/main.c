@@ -34,12 +34,14 @@ int main(int argc, char* argv[])
         }
         
         const char* string = argv[3];
-        H_processPNG(file, string);
+        H_processPNG(file, string, (program_mode)option[0]);
     }
     else if (option[0] == 'e')
     {
-        char* data = E_processPNG(file);
+        char* data = H_processPNG(file, NULL, (program_mode)option[0]);
         printf("Data: %s\n", data);
+
+        free(data);
     }
     else 
     {

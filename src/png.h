@@ -13,8 +13,8 @@ ARRAY(uint32_t)
 
 void extractImportantInformation(span* data, png_info* info);
 
-void H_processPNG(FILE* file, const char* data);
-char* E_processPNG(FILE* file);
+char* H_processPNG(FILE* file, const char* data, program_mode mode);
+//char* E_processPNG(FILE* file);
 
 void modifyIDATChunks(
     span* inflated, 

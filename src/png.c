@@ -113,14 +113,14 @@ char* H_processPNG(FILE* file, const char* data, program_mode mode)
 
         fread(&crc, sizeof(byte), sizeof(uint32_t), file);
 
-        printf("[%s, %d]\n", chunk_type, length);
+        //printf("[%s, %d]\n", chunk_type, length);
         
         if (!strcmp(chunk_type, "IHDR"))
         {
             extractImportantInformation(&buffer, &information);
 
-            printf("Properties: Width: %d, Height: %d, BPP: %d\n", 
-                    information.width, information.height, information.bpp);
+            //printf("Properties: Width: %d, Height: %d, BPP: %d\n", 
+                    //information.width, information.height, information.bpp);
             
             size_t projected_size = ((information.width * information.bpp) + 1) * information.height; 
             resizeSpan(&inflated, projected_size);
@@ -174,12 +174,14 @@ char* H_processPNG(FILE* file, const char* data, program_mode mode)
 
     } while(strcmp(chunk_type, "IEND") != 0);
     
+    /*
     for (int i = 0; i < chunk_lengths.size; ++i)
     {
         uint32_t* chunk_size = get_uint32_t(&chunk_lengths, i);
         printf("%d: %d\n", i, *chunk_size);
     }
-    
+    */
+
     if (mode == HIDE)
         fclose(out);
 
@@ -215,6 +217,7 @@ void modifyIDATChunks(span* inflated, uint32_t buffer_length, uint32_t_dynamic_a
     int ret;
 
     cmprsn_state.started = false;
+    cmprsn_state.final = false;
 
     cmprsn_state.stream.zalloc = NULL;
     cmprsn_state.stream.zfree = NULL;
@@ -270,8 +273,8 @@ void hide(span* data, const char* string)
     uint32_t length = strlen(string);
     byte* length_bytes = (byte*)&length;
 
-    printf("%d bytes to be hidden\n", length);
-    printf("done\n");
+    //printf("%d bytes to be hidden\n", length);
+    //printf("done\n");
 
     for (int b = 0; b < sizeof(uint32_t); ++b)
     {
@@ -282,7 +285,7 @@ void hide(span* data, const char* string)
         }
     }
 
-    printf("done\n");
+    //printf("done\n");
 
     for (int b = 0; b < length; ++b)
     {
@@ -293,7 +296,7 @@ void hide(span* data, const char* string)
         }
     }
     
-    printf("done\n");
+    //printf("done\n");
 }
 
 char* extract(span* data)
@@ -310,7 +313,7 @@ char* extract(span* data)
         }
     }
 
-    printf("found length: %d\n", length);
+    //printf("found length: %d\n", length);
 
     char* string = malloc(sizeof(char) * (length + 1));
     memset(string, 0, sizeof(char) * length);

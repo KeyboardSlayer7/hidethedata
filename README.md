@@ -20,7 +20,7 @@ Heard about it. Sounded cool. Wanted to explore the concept for myself.
 
 :bug: Known Issues
 
-- :man_shrugging:
+- Extrememly long strings overwrite filter type bytes in scanlines, except for the first scanline.
 
 :bulb: Future Plans
 

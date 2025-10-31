@@ -1,5 +1,6 @@
 #include <stdbool.h>
 #include <stdio.h>
+#include <math.h>
 
 #include "compression.h"
 #include "zlib.h"
@@ -60,9 +61,9 @@ int zlibDeflate(compression_state* cs)
     return ret;
 }
 
-uint8_t paeth(uint8_t a, uint8_t b, uint8_t c)
+uint8_t paeth(uint16_t a, uint16_t b, uint16_t c)
 {
-    uint8_t p, pa, pb, pc, pr;
+    uint16_t p, pa, pb, pc, pr;
 
     p = a + b - c;
     pa = abs(p - a);

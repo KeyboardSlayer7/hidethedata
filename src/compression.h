@@ -25,7 +25,7 @@ typedef enum filter_type_e
 int zlibInflate(compression_state* cs);
 int zlibDeflate(compression_state* cs);
 
-uint8_t paeth(uint8_t a, uint8_t b, uint8_t c);
+uint8_t paeth(uint16_t a, uint16_t b, uint16_t c);
 void unfilter(span* filtered, const png_info* info);
 void filter(span* unfiltered, span* filtered, const png_info* info);
 

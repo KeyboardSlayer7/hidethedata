@@ -21,6 +21,7 @@ set(SOURCES
     src/core.h
     src/compression.h
     src/compression.c
+    src/copy.h
 )
 
 add_executable(
@@ -31,3 +32,10 @@ add_executable(
 find_package(ZLIB REQUIRED)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC ZLIB::ZLIB)
+
+if(UNIX)
+    target_link_libraries(${PROJECT_NAME} PUBLIC X11)
+endif()
+
+if(WIN32)
+endif()

@@ -5,6 +5,7 @@
 
 #include "png.h"
 #include "utils.h"
+#include "copy.h"
 
 int main(int argc, char* argv[])
 {
@@ -39,6 +40,7 @@ int main(int argc, char* argv[])
     else if (option[0] == 'e')
     {
         char* data = H_processPNG(file, NULL, (program_mode)option[0]);
+        xCopy(data);
         printf("Data: %s\n", data);
 
         free(data);

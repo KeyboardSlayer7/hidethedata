@@ -1,4 +1,4 @@
-# steganography
+# Hide The Data
 
 PNG steganography in C with zlib. [Learn more about Steganography here.](https://en.wikipedia.org/wiki/Steganography) 
 
